@@ -1,0 +1,7 @@
+dump-dir/
+logs/
+dist/
+samples/
+.DS_Store
+test_files/
+out/

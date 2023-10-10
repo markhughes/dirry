@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dirry wasm</title>
+    <script src="wasm_exec.js"></script>
+
+    <style>
+        .chunk-set pre {
+            display: none;
+            background-color: #f5f5f5;
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-top: 5px;
+        }
+
+        .chunk-set {
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+        }
+
+        .chunk-set input[type="checkbox"] {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <input type="file" id="fileInput" />
+    <button id="process-btn" onclick="loadFile()">Process File</button>
+
+    <div style="display: flex; flex: 1; flex-direction: row;">
+        <div id="chunks">
+        </div>
+        <div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('change', function (event) {
+
+            console.log(event.target);
+
+            event.target.closest('.chunk-set').querySelector('pre').style.display = event.target.checked ? 'block' : 'none';
+        });
+
+
+        const wasmWorker = new Worker('worker.js');
+        /*
+                            js.ValueOf(resource.ChunkType),
+                            js.ValueOf(int(resource.Offset)),
+                            js.ValueOf(int(resource.UncompressedSize)),
+                            js.ValueOf(filePath),
+                            js.ValueOf(content),
+                            js.ValueOf(shockwave.PkgName),
+                            js.ValueOf(""),
+        
+        */
+        wasmWorker.onmessage = (ev) => {
+            console.log('ev.data.action', ev.data.action)
+            switch (ev.data.action) {
+                case "callbackChunk":
+                    const id = crypto.randomUUID()
+                    const [chunkType, offset, uncompressSized, filePath, content, packageName, prefix] = ev.data.args
+
+                    const chunksContainer = document.getElementById('chunks');
+
+                    const chunkSetDiv = document.createElement('div');
+                    chunkSetDiv.className = 'chunk-set';
+                    chunkSetDiv.setAttribute('data-id', id);
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'open';
+                    checkbox.setAttribute('data-id', id);
+
+
+                    const label = document.createElement('label');
+                    label.appendChild(checkbox);
+                    label.innerHTML += `${chunkType} @ ${offset} (${uncompressSized} bytes)`;
+                    label.setAttribute('data-id', id);
+
+                    chunkSetDiv.appendChild(label);
+
+                    const preElem = document.createElement('pre');
+
+                    switch (chunkType) {
+                        case "+chunkmap":
+                            let chunkMap = JSON.parse(content);
+                            chunkMap = chunkMap.map((value) => {
+                                const { Binary, ...values } = value;
+
+                                return values;
+                            })
+
+                            preElem.textContent = JSON.stringify(chunkMap, null, '    ');
+
+                            break;
+
+                        case "ediM":
+                            const { Binary, ...data } = JSON.parse(content);
+
+                            let imgElement = document.createElement('img');
+                            imgElement.src = `data:${data.MIME};base64,${Binary}`;
+                            imgElement.setAttribute('data-id', id);
+                            imgElement.style.maxHeight = '100px';
+
+                            label.innerHTML = `<img src="data:${data.MIME};base64,${Binary}" style="height: 40px; width: 40px;" /> ` + label.innerHTML
+
+                            preElem.appendChild(imgElement);
+
+                            break;
+
+                        default:
+                            preElem.textContent = content
+
+                            break;
+                    }
+
+                    preElem.setAttribute('data-id', id);
+
+                    chunkSetDiv.appendChild(preElem);
+
+                    chunksContainer.appendChild(chunkSetDiv);
+
+
+                    // // Add this event listener
+                    // checkbox.addEventListener('change', () => {
+                    //     console.log('tick tock')
+                    //     preElem.style.display = this.checked ? 'block' : 'none'
+                    // });
+
+                    break;
+            }
+            console.log('ev', ev)
+        }
+
+        const callbackChunk = (...args) => {
+            console.log('callbackChunk', args)
+        }
+
+        const callbackBinary = (...args) => {
+            console.log('callbackBinary', args)
+        }
+
+        function loadFile() {
+            document.getElementById('process-btn').setAttribute("disabled", true)
+
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.readAsArrayBuffer(file);
+                reader.onload = function (event) {
+                    const fileName = `/${file.name}`
+                    const byteArray = new Uint8Array(event.target.result);
+
+                    wasmWorker.postMessage({
+                        action: 'processFile',
+                        data: { fileName, byteArray }
+                    });
+
+                }
+
+            }
+        }
+    </script>
+
+</body>
+
+</html>
