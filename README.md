@@ -35,6 +35,10 @@ Will create a direcotr zip in out/zip
 
 ## Whats missing/broken?
 
+### Some cast chunks
+
+I have broken something recently I'll fix it up
+
 ### Some inputs
 
 Mac resource fork files are planned but not done.
@@ -54,11 +58,11 @@ Needs more research.
 
 ### Sometimes Cast Issues
 
-I have gone through many projects about casts and I always seem to extract the common properties wrong of it wrong (slight offset issue I think).
+I have gone through many projects about casts and I always seem to extract the common properties wrong (offset issue I think / me not understanding the format).
 
 ### 3D Conversion
 
-I do intend to do this but it looks like something done with Intel 3D’s IFX Toolkit
+I do intend to do this but it looks like something done with Intel 3D’s IFX Toolkit, and that information seems lost.
 
 ## Debugging
 
